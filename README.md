@@ -1,4 +1,4 @@
-## LETS [![Code Health](https://landscape.io/github/osuripple/lets/master/landscape.svg?style=flat)](https://landscape.io/github/osuripple/lets/master)
+# LETS - Modified for the osu! private server: Atoka
 
 - Origin: https://zxq.co/ripple/lets
 - Mirror: https://github.com/osuripple/lets
@@ -19,6 +19,7 @@ This server handles every non real time client feature, so:
 - Python 3.5+
 - Cython
 - C compiler
+- (stuff inside `requirements.txt`)
 
 ## How to set up LETS
 First of all, initialize and update the submodules
@@ -27,7 +28,7 @@ $ git submodule init && git submodule update
 ```
 afterwards, install the required dependencies with pip
 ```
-$ pip install -r requirements.txt
+$ pip3 install -r requirements.txt
 ```
 compile all `*.pyx` files to `*.so` or `*.dll` files using `setup.py` (distutils file).
 This compiles `catch-the-pp` as well.
@@ -39,7 +40,7 @@ then, run LETS once to create the default config file and edit it
 $ python3 lets.py
 $ nano config.ini
 ```
-finally, compile oppai-ng (inside pp/oppai-ng).
+finally, compile oppai-ng (inside `pp/oppai-ng`).
 
 ## tomejerry.py
 `tomejerry.py` is a tool that allows you to calculate pp for specific scores. It's extremely useful to do mass PP recalculations if you mess something up. It uses lets' config and packages, so make sure lets is installed and configured correctly before using it.  
