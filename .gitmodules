@@ -1,9 +1,9 @@
 [submodule "common"]
 	path = common
-	url = https://zxq.co/ripple/ripple-python-common.git
+	url = https://github.com/osuAtoka/atoka-python-common.git
 [submodule "secret"]
 	path = secret
-	url = http://github.com/osukatori/secret.git
+	url = http://github.com/osufx/secret.git
 [submodule "pp/oppai-ng"]
 	path = pp/oppai-ng
 	url = https://github.com/Francesco149/oppai-ng.git
