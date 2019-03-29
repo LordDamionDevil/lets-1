@@ -18,7 +18,8 @@ from common.log import logUtils as log
 from common.redis import pubSub
 from common.ripple import scoreUtils
 from common.web import schiavo
-from handlers import apiCacheBeatmapHandler
+from handlers import apiCacheBeatmapHandler, rateHandler
+from handlers import commentHandler
 from handlers import apiPPHandler
 from handlers import apiStatusHandler
 from handlers import banchoConnectHandler
@@ -59,6 +60,8 @@ def make_app():
 		(r"/web/osu-search-set.php", osuSearchSetHandler.handler),
 		(r"/web/check-updates.php", checkUpdatesHandler.handler),
 		(r"/web/osu-error.php", osuErrorHandler.handler),
+		(r"/web/osu-comment.php", commentHandler.handler),
+		(r"/web/osu-rate.php", rateHandler.handler),
 		(r"/ss/(.*)", getScreenshotHandler.handler),
 		(r"/web/maps/(.*)", mapsHandler.handler),
 		(r"/d/(.*)", downloadMapHandler.handler),
@@ -80,9 +83,8 @@ def make_app():
 
 		# Not done yet
 		(r"/web/lastfm.php", emptyHandler.handler),
-		(r"/web/osu-rate.php", emptyHandler.handler),
-		(r"/web/osu-comment.php", emptyHandler.handler),
 		(r"/web/osu-checktweets.php", emptyHandler.handler),
+		(r"/web/osu-addfavourite.php", emptyHandler.handler),
 
 		(r"/loadTest", loadTestHandler.handler),
 	], default_handler_class=defaultHandler.handler)
