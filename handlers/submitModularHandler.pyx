@@ -123,6 +123,52 @@ class handler(requestsManager.asyncRequestHandler):
 				log.debug("Beatmap is not submitted/outdated/unknown. Score submission aborted.")
 				return
 
+			"""
+			Check FL rule (std only.)
+			User sends score -> the submit handler checks for FL rule breakage -> 
+			if break: block submission, send warning (log and players.)
+			if not: allow submission.
+			"""
+			if (s.gameMode < 1): # Checks to see if the score is not standard.
+				# Check play to see if it has been done on Bancho. Unfinished.
+				# Remove DT or HT from Mods when checking if the play is done on Bancho
+				# dthtcheck = s.mods
+				# if ((s.mods & mods.FLASHLIGHT & mods.FLASHLIGHT) > 0):
+				#	dthtcheck -= 64
+				# if ((s.mods & mods.HALFTIME & mods.FLASHLIGHT) > 0):
+				#	dthtcheck -=256
+
+				# Request scores from osuapi for allow fl check.
+				# flreq = requests.get("https://osu.ppy.sh/api/get_scores?b={}&limit=1&mods={}&k={}").format(beatmapInfo.beatmapID, dthtcheck, glob.conf.config["osuapi"]["apikey"])
+				# fldata = json.loads(flreq)
+				# flenable = fldata["enabled_mods"]
+
+				# Fokabot msg variables to warn the user of rule breakage.
+				flmsg = "Baka! {}, you have violated the FL rule! You tried to play a map that is 7.0*+ and is longer than 30 seconds. All scores that violate this rule will not be submitted. I hate wasting my time on stupid people who forget to turn their FL modifier off! >_>".format(username.encode().decode("ASCII", "ignore"))
+				flmsgparams = urlencode({"k": glob.conf.config["server"]["apikey"], "to": username, "msg": flmsg})
+
+				# Star and Mod calculation
+				sresp = requests.get("http://127.0.0.1:5002/api/v1/pp?b={}&m={}".format(beatmapInfo.beatmapID, s.mods), timeout=10).text # gets beatmap stats with the added mods in json.
+				sdata = json.loads(sresp) # loads beatmap info json
+				stars = sdata["stars"] # looks for star rating in the array, returns # of stars with the added mods.
+				mapLength = beatmapInfo.hitLength
+				if ((s.mods & mods.DOUBLETIME) > 0):
+					mapLength /= 1.5 # One thing to point out make sure you use division here, not multiplication :facepalm:
+				if ((s.mods & mods.HALFTIME) > 0):
+					mapLength /= 0.75
+
+				# Actual rule check
+				dbflcheck = glob.db.fetch("SELECT allow_fl FROM beatmaps WHERE beatmap_id = {} LIMIT 1".format(beatmapInfo.beatmapID))
+				if (((s.mods & mods.FLASHLIGHT) > 0) and (dbflcheck["allow_fl"] == 1)): # Check if beatmap can bypass check, if so bypass, if not continue to check.
+					pass
+				elif (((s.mods & mods.FLASHLIGHT) > 0 and (stars > 7.0 and mapLength > 30 or stars > 8.0))):
+					log.info("{} tried to submit a score with FL, but it broke the FL rule.".format(username))
+					log.info("User: {}, Map MD5: {}, Length: {}, Stars: {}".format(username, scoreData[0], mapLength, stars))
+					requests.get("{}/api/v1/fokabotMessage?{}".format(glob.conf.config["server"]["banchourl"], flmsgparams))
+					return
+			else:
+				pass # Passes the score if the score is not played in standard.
+
 			# Calculate PP
 			# NOTE: PP are std and mania only
 			ppCalcException = None
@@ -141,7 +187,7 @@ class handler(requestsManager.asyncRequestHandler):
 			if beatmapInfo.rankedStatus >= rankedStatuses.LOVED and s.passed:
 				s.pp = 0
 
-			# Restrict obvious cheaters
+			# Restrict obvious cheaters (LOL Welcome to Atoka, home of cheaters. 10k pp limit set.)
 			if (s.pp >= 10000 and s.gameMode == gameModes.STD) and restricted == False:
 				userUtils.restrict(userID)
 				userUtils.appendNotes(userID, "Restricted due to too high pp gain ({}pp)".format(s.pp))
@@ -286,7 +332,7 @@ class handler(requestsManager.asyncRequestHandler):
 
 			# Always update users stats (total/ranked score, playcount, level, acc and pp)
 			# even if not passed
-			log.debug("Updating {}'s stats...".format(username))
+			log.info("Updating {}'s stats...".format(username))
 			userUtils.updateStats(userID, s)
 
 			# Get "after" stats for ranking panel

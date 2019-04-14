@@ -48,9 +48,12 @@ class handler(requestsManager.asyncRequestHandler):
 			replayData = glob.db.fetch("SELECT scores.*, users.username AS uname FROM scores LEFT JOIN users ON scores.userid = users.id WHERE scores.id = %s", [replayID])
 
 			# Increment 'replays watched by others' if needed
+			immuneUsers = [1001, 1002, 1028]
+			UserID = userUtils.getIDSafe(username)
 			if replayData is not None:
 				if username != replayData["uname"]:
-					userUtils.incrementReplaysWatched(replayData["userid"], replayData["play_mode"], replayData["mods"])
+					if userID not in immuneUsers:
+						userUtils.incrementReplaysWatched(replayData["userid"], replayData["play_mode"], replayData["mods"])
 
 			# Serve replay
 			log.info("Serving replay_{}.osr".format(replayID))

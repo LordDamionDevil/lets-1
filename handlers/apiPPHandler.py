@@ -89,7 +89,7 @@ class handler(requestsManager.asyncRequestHandler):
 			bmap = beatmap.beatmap(beatmapMd5, beatmapSetID)
 
 			# Check beatmap length
-			if bmap.hitLength > 900:
+			if bmap.hitLength < 0:
 				raise exceptions.beatmapTooLongException(MODULE_NAME)
 
 			returnPP = []

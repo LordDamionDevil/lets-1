@@ -15,6 +15,13 @@ from common import generalUtils
 from objects import glob
 from common.sentry import sentry
 
+def toDotTicks(unixTime):
+    """
+    :param unixTime: Unix timestamp
+    """
+    dotTicksBase = 621355968000000000
+    return (10000000*unixTime)+dotTicksBase
+
 MODULE_NAME = "get_full_replay"
 class handler(requestsManager.asyncRequestHandler):
 	"""
@@ -60,7 +67,7 @@ class handler(requestsManager.asyncRequestHandler):
 				[scoreData["full_combo"], dataTypes.byte],
 				[scoreData["mods"], dataTypes.uInt32],
 				[0, dataTypes.byte],
-				[0, dataTypes.uInt64],
+				[toDotTicks(int(scoreData["time"])), dataTypes.uInt64],
 				[rawReplay, dataTypes.rawReplay],
 				[0, dataTypes.uInt32],
 				[0, dataTypes.uInt32],
