@@ -15,6 +15,10 @@ This server handles every non real time client feature, so:
 - osu!mania pp calculation with `wifipiano2`, made by Nyo with reference code from [Tom94's osu-performance](https://github.com/ppy/osu-performance)
 - catch the beat pp calculation with [catch-the-pp](https://github.com/osuripple/catch-the-pp), made by Sunpy and cythonized by Nyo
 
+## Big Note
+
+- Anything you take, borrow, or otherwise use that we made ourselves (ourselves meaning osu!Atoka) we require that you give credit to us (us meaning osu!Atoka).
+
 ## Requirements
 - Python 3.5+
 - Cython
