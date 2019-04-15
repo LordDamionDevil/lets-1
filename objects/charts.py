@@ -112,7 +112,7 @@ class OverallChart(Chart):
         :param new_rank: global rank after submitting the score
         """
 
-        super(OverallChart, self).__init__("overall", f"https://akatsuki.pw/u/{user_id}", "Overall Ranking")
+        super(OverallChart, self).__init__("overall", f"https://atoka.pw/u/{user_id}", "Overall Ranking")
         self.rank = (old_rank, new_rank)
         self.ranked_score = (old_user_stats["rankedScore"], new_user_stats["rankedScore"])
         self.total_score = (old_user_stats["totalScore"], new_user_stats["totalScore"])
