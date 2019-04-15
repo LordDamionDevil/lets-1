@@ -3,7 +3,6 @@ from common.ripple import userUtils
 from constants import rankedStatuses
 from common.constants import mods as modsEnum
 from objects import glob
-from common.constants import privileges
 
 
 class scoreboard:
