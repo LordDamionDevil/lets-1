@@ -70,7 +70,7 @@ class BeatmapChart(Chart):
         :param beatmap_id: beatmap id, for the clickable link
         """
 
-        super(BeatmapChart, self).__init__("beatmap", f"https://akatsuki.pw/b/{beatmap_id}", "Beatmap Ranking")
+        super(BeatmapChart, self).__init__("beatmap", f"https://atoka.pw/b/{beatmap_id}", "Beatmap Ranking")
         self.rank = (old_score.rank if old_score is not None else None, new_score.rank)
         self.max_combo = (old_score.maxCombo if old_score is not None else None, new_score.maxCombo)
         self.accuracy = (old_score.accuracy * 100 if old_score is not None else None, new_score.accuracy * 100)
