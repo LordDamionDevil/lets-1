@@ -207,6 +207,18 @@ class handler(requestsManager.asyncRequestHandler):
 				log.warning("**{}** ({}) has been restricted due to notepad hack".format(username, userID), "cm")
 				return
 
+			# Right before submitting the score, get the personal best score object (we need it for charts)
+			if s.passed and s.oldPersonalBest > 0:
+				oldPersonalBestRank = glob.personalBestCache.get(userID, s.fileMd5)
+				if oldPersonalBestRank == 0:
+					oldScoreboard = scoreboard.scoreboard(username, s.gameMode, beatmapInfo, False)
+					oldScoreboard.setPersonalBestRank()
+					oldPersonalBestRank = max(oldScoreboard.personalBestRank, 0)
+				oldPersonalBest = score.score(s.oldPersonalBest, oldPersonalBestRank)
+			else:
+				oldPersonalBestRank = 0
+				oldPersonalBest = None
+
 			# Save score in db
 			s.saveScoreInDB()
 
