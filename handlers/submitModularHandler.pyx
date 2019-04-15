@@ -390,12 +390,10 @@ class handler(requestsManager.asyncRequestHandler):
 
 				# Trigger bancho stats cache update
 				glob.redis.publish("peppy:update_cached_stats", userID)
-
-				# Get personal best after submitting the score
 				newScoreboard = scoreboard.scoreboard(username, s.gameMode, beatmapInfo, False)
-				newScoreboard.setPersonalBest()
-
-				
+				newScoreboard.setPersonalBestRank()
+				personalBestID = newScoreboard.getPersonalBestID()
+				assert personalBestID is not None
 				currentPersonalBest = score.score(personalBestID, newScoreboard.personalBestRank)
 					
 				# Get rank info (current rank, pp/score to next rank, user who is 1 rank above us)
