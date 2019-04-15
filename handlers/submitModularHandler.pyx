@@ -24,6 +24,7 @@ from objects import beatmap
 from objects import glob
 from objects import score
 from objects import scoreboard
+from helpers.generalHelper import zingonify
 from objects.charts import BeatmapChart, OverallChart
 
 from secret import achievements, butterCake
@@ -394,6 +395,9 @@ class handler(requestsManager.asyncRequestHandler):
 				newScoreboard = scoreboard.scoreboard(username, s.gameMode, beatmapInfo, False)
 				newScoreboard.setPersonalBest()
 
+				
+				currentPersonalBest = score.score(personalBestID, newScoreboard.personalBestRank)
+					
 				# Get rank info (current rank, pp/score to next rank, user who is 1 rank above us)
 				rankInfo = leaderboardHelper.getRankInfo(userID, s.gameMode)
 
@@ -452,7 +456,7 @@ class handler(requestsManager.asyncRequestHandler):
 
 				# Some debug messages
 				log.debug("Generated output for online ranking screen!")
-				log.debug(msg)
+				log.debug(output)
 				
 				userStats = userUtils.getUserStats(userID, s.gameMode)
 				if s.completed == 3 and restricted == False and beatmapInfo.rankedStatus >= rankedStatuses.RANKED and s.pp > 0:
