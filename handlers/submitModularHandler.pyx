@@ -323,20 +323,23 @@ class handler(requestsManager.asyncRequestHandler):
 			# Update beatmap playcount (and passcount)
 			beatmap.incrementPlaycount(s.fileMd5, s.passed)
 
-			# If score has mods that effect hitLength, make adjustments for
-			# playtime update.
-			mapLength = beatmapInfo.hitLength
-			if ((s.mods & mods.DOUBLETIME) > 0):
-				mapLength /= 1.5
-			if ((s.mods & mods.HALFTIME) > 0):
-				mapLength /= 0.75
-			# Update playtime
-			userUtils.incrementPlaytime(s.playerUserID, s.gameMode, beatmapInfo.hitLength)
+			
+			#Only do these if completed is == 3
+			if s.completed == 3:
+				# If score has mods that effect hitLength, make adjustments for
+				# playtime update.
+				mapLength = beatmapInfo.hitLength
+				if ((s.mods & mods.DOUBLETIME) > 0):
+					mapLength /= 1.5
+				if ((s.mods & mods.HALFTIME) > 0):
+					mapLength /= 0.75
+				# Update playtime
+				userUtils.incrementPlaytime(s.playerUserID, s.gameMode, beatmapInfo.hitLength)
 
-			# Calculate total hits
-			totalHits = s.c300 + s.c100 + s.c50 + s.cMiss
-			# Update total hits
-			userUtils.incrementTotalhits(s.playerUserID, s.gameMode, totalHits)
+				# Calculate total hits
+				totalHits = s.c300 + s.c100 + s.c50 + s.cMiss
+				# Update total hits
+				userUtils.incrementTotalhits(s.playerUserID, s.gameMode, totalHits)
 
 			# Get "before" stats for ranking panel (only if passed)
 			if s.passed:
