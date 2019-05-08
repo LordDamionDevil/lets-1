@@ -24,8 +24,6 @@ from objects import beatmap
 from objects import glob
 from objects import score
 from objects import scoreboard
-from helpers.generalHelper import zingonify
-from objects.charts import BeatmapChart, OverallChart
 
 from secret import achievements, butterCake
 from secret.discord_hooks import Webhook
@@ -39,7 +37,6 @@ class handler(requestsManager.asyncRequestHandler):
 	@tornado.gen.engine
 	#@sentry.captureTornado
 	def asyncPost(self):
-		newCharts = self.request.uri == "/web/osu-submit-modular-selector.php"
 		try:
 			# Resend the score in case of unhandled exceptions
 			keepSending = True
@@ -134,17 +131,22 @@ class handler(requestsManager.asyncRequestHandler):
 			"""
 			if (s.gameMode < 1): # Checks to see if the score is not standard.
 				# Check play to see if it has been done on Bancho. Unfinished.
-				# Remove DT or HT from Mods when checking if the play is done on Bancho
-				# dthtcheck = s.mods
-				# if ((s.mods & mods.FLASHLIGHT & mods.FLASHLIGHT) > 0):
-				#	dthtcheck -= 64
-				# if ((s.mods & mods.HALFTIME & mods.FLASHLIGHT) > 0):
-				#	dthtcheck -=256
+				# Remove DT or HT from Mods to prevent the issue of timewarp.
+				#dthtremove = s.mods
+				#if ((s.mods & mods.DOUBLETIME & mods.FLASHLIGHT) > 0):
+				#	dthtremove -= 64
+				#if ((s.mods & mods.HALFTIME & mods.FLASHLIGHT) > 0):
+				#	dthtremove -= 256
 
-				# Request scores from osuapi for allow fl check.
-				# flreq = requests.get("https://osu.ppy.sh/api/get_scores?b={}&limit=1&mods={}&k={}").format(beatmapInfo.beatmapID, dthtcheck, glob.conf.config["osuapi"]["apikey"])
-				# fldata = json.loads(flreq)
-				# flenable = fldata["enabled_mods"]
+				# Request scores from osuapi to check if the FL play has been done there (w/o DT or HT)
+				#flreq = requests.get("https://osu.ppy.sh/api/get_scores?b={}&limit=1&mods={}&k={}".format(beatmapInfo.beatmapID, dthtremove, glob.conf.config["osuapi"]["apikey"]), timeout=10).text
+				#fldata = json.loads(flreq)
+				#osuapireturn = fldata["enabled_mods"]
+
+				# This entire FL check is literally aids.
+				#banchopass = 0
+				#if (osuapireturn == dthtremove):
+				#	banchopass = 1
 
 				# Fokabot msg variables to warn the user of rule breakage.
 				flmsg = "Baka! {}, you have violated the FL rule! You tried to play a map that is 7.0*+ and is longer than 30 seconds. All scores that violate this rule will not be submitted. I hate wasting my time on stupid people who forget to turn their FL modifier off! >_>".format(username.encode().decode("ASCII", "ignore"))
@@ -156,7 +158,7 @@ class handler(requestsManager.asyncRequestHandler):
 				stars = sdata["stars"] # looks for star rating in the array, returns # of stars with the added mods.
 				mapLength = beatmapInfo.hitLength
 				if ((s.mods & mods.DOUBLETIME) > 0):
-					mapLength /= 1.5 # One thing to point out make sure you use division here, not multiplication :facepalm:
+					mapLength /= 1.5
 				if ((s.mods & mods.HALFTIME) > 0):
 					mapLength /= 0.75
 
@@ -164,7 +166,9 @@ class handler(requestsManager.asyncRequestHandler):
 				dbflcheck = glob.db.fetch("SELECT allow_fl FROM beatmaps WHERE beatmap_id = {} LIMIT 1".format(beatmapInfo.beatmapID))
 				if (((s.mods & mods.FLASHLIGHT) > 0) and (dbflcheck["allow_fl"] == 1)): # Check if beatmap can bypass check, if so bypass, if not continue to check.
 					pass
-				elif (((s.mods & mods.FLASHLIGHT) > 0 and (stars > 7.0 and mapLength > 30 or stars > 8.0))):
+				#elif (((s.mods & mods.FLASHLIGHT) > 0) and (banchopass == 1)):
+				#	pass
+				elif (((s.mods & mods.FLASHLIGHT) > 0 and (stars > 6.99 and mapLength > 30 or stars > 8.0))):
 					log.info("{} tried to submit a score with FL, but it broke the FL rule.".format(username))
 					log.info("User: {}, Map MD5: {}, Length: {}, Stars: {}".format(username, scoreData[0], mapLength, stars))
 					requests.get("{}/api/v1/fokabotMessage?{}".format(glob.conf.config["server"]["banchourl"], flmsgparams))
@@ -207,18 +211,6 @@ class handler(requestsManager.asyncRequestHandler):
 				userUtils.appendNotes(userID, "Restricted due to notepad hack")
 				log.warning("**{}** ({}) has been restricted due to notepad hack".format(username, userID), "cm")
 				return
-
-			# Right before submitting the score, get the personal best score object (we need it for charts)
-			if s.passed and s.oldPersonalBest > 0:
-				oldPersonalBestRank = glob.personalBestCache.get(userID, s.fileMd5)
-				if oldPersonalBestRank == 0:
-					oldScoreboard = scoreboard.scoreboard(username, s.gameMode, beatmapInfo, False)
-					oldScoreboard.setPersonalBestRank()
-					oldPersonalBestRank = max(oldScoreboard.personalBestRank, 0)
-				oldPersonalBest = score.score(s.oldPersonalBest, oldPersonalBestRank)
-			else:
-				oldPersonalBestRank = 0
-				oldPersonalBest = None
 
 			# Save score in db
 			s.saveScoreInDB()
@@ -291,11 +283,10 @@ class handler(requestsManager.asyncRequestHandler):
 
 			
 
-			""" Bake a cake
+			# Bake a cake
 
-			if s.passed == True:
-					butterCake.bake(self, s)
-			"""
+			#if s.passed == True:
+			#		butterCake.bake(self, s)
 
 			# Save replay
 			if s.passed and s.scoreID > 0 and s.completed == 3:
@@ -332,6 +323,21 @@ class handler(requestsManager.asyncRequestHandler):
 			# Update beatmap playcount (and passcount)
 			beatmap.incrementPlaycount(s.fileMd5, s.passed)
 
+			# If score has mods that effect hitLength, make adjustments for
+			# playtime update.
+			mapLength = beatmapInfo.hitLength
+			if ((s.mods & mods.DOUBLETIME) > 0):
+				mapLength /= 1.5
+			if ((s.mods & mods.HALFTIME) > 0):
+				mapLength /= 0.75
+			# Update playtime
+			userUtils.incrementPlaytime(s.playerUserID, s.gameMode, beatmapInfo.hitLength)
+
+			# Calculate total hits
+			totalHits = s.c300 + s.c100 + s.c50 + s.cMiss
+			# Update total hits
+			userUtils.incrementTotalhits(s.playerUserID, s.gameMode, totalHits)
+
 			# Get "before" stats for ranking panel (only if passed)
 			if s.passed:
 				# Get stats and rank
@@ -355,7 +361,6 @@ class handler(requestsManager.asyncRequestHandler):
 			# and to determine if we should update the leaderboard
 			# (only if we passed that song)
 			if s.passed:
-				maxCombo = userUtils.getMaxCombo(userID, s.gameMode) 
 				# Get new stats
 				newUserData = userUtils.getUserStats(userID, s.gameMode)
 				glob.userStatsCache.update(userID, s.gameMode, newUserData)
@@ -390,71 +395,55 @@ class handler(requestsManager.asyncRequestHandler):
 
 				# Trigger bancho stats cache update
 				glob.redis.publish("peppy:update_cached_stats", userID)
+
+				# Get personal best after submitting the score
 				newScoreboard = scoreboard.scoreboard(username, s.gameMode, beatmapInfo, False)
-				newScoreboard.setPersonalBestRank()
-				personalBestID = newScoreboard.getPersonalBestID()
-				assert personalBestID is not None
-				currentPersonalBest = score.score(personalBestID, newScoreboard.personalBestRank)
-					
+				newScoreboard.setPersonalBest()
+
 				# Get rank info (current rank, pp/score to next rank, user who is 1 rank above us)
 				rankInfo = leaderboardHelper.getRankInfo(userID, s.gameMode)
 
-				if newCharts:
-					log.debug("Using new charts")
-					dicts = [
-						collections.OrderedDict([
-							("beatmapId", beatmapInfo.beatmapID),
-							("beatmapSetId", beatmapInfo.beatmapSetID),
-							("beatmapPlaycount", beatmapInfo.playcount + 1),
-							("beatmapPasscount", beatmapInfo.passcount + (s.completed == 3)),
-							("approvedDate", "")
-						]),
-						BeatmapChart(
-							oldPersonalBest if s.completed == 3 else currentPersonalBest,
-							currentPersonalBest if s.completed == 3 else s,
-							beatmapInfo.beatmapID,
-						),
-						OverallChart(
-							userID, oldUserData, newUserData, maxCombo, s, new_achievements, oldRank, rankInfo["currentRank"]
-						)
-					]
-				else:
-					log.debug("Using old charts")
-					dicts = [
-						collections.OrderedDict([
-							("beatmapId", beatmapInfo.beatmapID),
-							("beatmapSetId", beatmapInfo.beatmapSetID),
-							("beatmapPlaycount", beatmapInfo.playcount),
-							("beatmapPasscount", beatmapInfo.passcount),
-							("approvedDate", "")
-						]),
-						collections.OrderedDict([
-							("chartId", "overall"),
-							("chartName", "Overall Ranking"),
-							("chartEndDate", ""),
-							("beatmapRankingBefore", oldPersonalBestRank),
-							("beatmapRankingAfter", newScoreboard.personalBestRank),
-							("rankedScoreBefore", oldUserData["rankedScore"]),
-							("rankedScoreAfter", newUserData["rankedScore"]),
-							("totalScoreBefore", oldUserData["totalScore"]),
-							("totalScoreAfter", newUserData["totalScore"]),
-							("playCountBefore", newUserData["playcount"]),
-							("accuracyBefore", float(oldUserData["accuracy"]) / 100),
-							("accuracyAfter", float(newUserData["accuracy"]) / 100),
-							("rankBefore", oldRank),
-							("rankAfter", rankInfo["currentRank"]),
-							("toNextRank", rankInfo["difference"]),
-							("toNextRankUser", rankInfo["nextUsername"]),
-							("achievements", ""),
-							("achievements-new", secret.achievements.utils.achievements_response(new_achievements)),
-							("onlineScoreId", s.scoreID)
-						])
-					]
-				output = "\n".join(zingonify(x) for x in dicts)
+				# Output dictionary
+				output = collections.OrderedDict()
+				output["beatmapId"] = beatmapInfo.beatmapID
+				output["beatmapSetId"] = beatmapInfo.beatmapSetID
+				output["beatmapPlaycount"] = beatmapInfo.playcount
+				output["beatmapPasscount"] = beatmapInfo.passcount
+				#output["approvedDate"] = "2015-07-09 23:20:14\n"
+				output["approvedDate"] = "\n"
+				output["chartId"] = "overall"
+				output["chartName"] = "Overall Ranking"
+				output["chartEndDate"] = ""
+				output["beatmapRankingBefore"] = oldPersonalBestRank
+				output["beatmapRankingAfter"] = newScoreboard.personalBestRank
+				output["rankedScoreBefore"] = oldUserData["rankedScore"]
+				output["rankedScoreAfter"] = newUserData["rankedScore"]
+				output["totalScoreBefore"] = oldUserData["totalScore"]
+				output["totalScoreAfter"] = newUserData["totalScore"]
+				output["playCountBefore"] = newUserData["playcount"]
+				output["accuracyBefore"] = float(oldUserData["accuracy"])/100
+				output["accuracyAfter"] = float(newUserData["accuracy"])/100
+				output["rankBefore"] = oldRank
+				output["rankAfter"] = rankInfo["currentRank"]
+				output["toNextRank"] = rankInfo["difference"]
+				output["toNextRankUser"] = rankInfo["nextUsername"]
+				output["achievements"] = ""
+				output["achievements-new"] = secret.achievements.utils.achievements_response(new_achievements)
+				output["onlineScoreId"] = s.scoreID
+
+				# Build final string
+				msg = ""
+				for line, val in output.items():
+					msg += "{}:{}".format(line, val)
+					if val != "\n":
+						if (len(output) - 1) != list(output.keys()).index(line):
+							msg += "|"
+						else:
+							msg += "\n"
 
 				# Some debug messages
 				log.debug("Generated output for online ranking screen!")
-				log.debug(output)
+				log.debug(msg)
 				
 				userStats = userUtils.getUserStats(userID, s.gameMode)
 				if s.completed == 3 and restricted == False and beatmapInfo.rankedStatus >= rankedStatuses.RANKED and s.pp > 0:
