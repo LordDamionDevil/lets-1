@@ -324,8 +324,8 @@ class handler(requestsManager.asyncRequestHandler):
 			beatmap.incrementPlaycount(s.fileMd5, s.passed)
 
 			
-			#Only do these if completed is == 3
-			if s.completed == 3:
+			#Only do these if s.passed and s.scoreID > 0 and s.completed == 3: 
+			if s.passed and s.scoreID > 0 and s.completed == 3:
 				# If score has mods that effect hitLength, make adjustments for
 				# playtime update.
 				mapLength = beatmapInfo.hitLength
